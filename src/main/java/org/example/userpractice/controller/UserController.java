@@ -7,6 +7,7 @@ import org.example.userpractice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -19,14 +20,14 @@ public class UserController {
 
     // 1. 查询所有用户
     @GetMapping("/list")
-    public Result getUserList() {
+    public Result<List<User>> getUserList() {
         List<User> userList = userService.getAllUsers();
         return Result.success(userList);
     }
 
     // 2. 根据ID查询用户
     @GetMapping("/{id}")
-    public Result getUserById(@PathVariable Integer id) {
+    public Result<User> getUserById(@PathVariable Integer id) {
         User user = userService.getUserById(id);
         if (user == null) {
             return Result.error("用户不存在");
@@ -34,21 +35,19 @@ public class UserController {
         return Result.success(user);
     }
 
-    // 3. 添加用户（先注释@Valid，避免依赖问题导致报错）
+    // 3. 添加用户（参数校验注解@Valid）
     @PostMapping("/add")
-    public Result addUser(@RequestBody /*@Valid*/ User user) {
+    public Result<String> addUser(@RequestBody @Valid User user) {
         boolean isSuccess = userService.addUser(user);
         if (isSuccess) {
-            // 修正语法：去掉data: 直接传字符串
             return Result.success("添加成功！新用户ID：" + user.getId());
         }
-        // 修正语法：去掉msg: 直接传字符串
         return Result.error("添加失败！用户名已存在");
     }
 
-    // 4. 修改用户（先注释@Valid）
+    // 4. 修改用户
     @PutMapping("/update")
-    public Result updateUser(@RequestBody /*@Valid*/ User user) {
+    public Result<String> updateUser(@RequestBody @Valid User user) {
         boolean isSuccess = userService.updateUser(user);
         if (isSuccess) {
             return Result.success("修改成功");
@@ -58,7 +57,7 @@ public class UserController {
 
     // 5. 删除用户
     @DeleteMapping("/{id}")
-    public Result deleteUser(@PathVariable Integer id) {
+    public Result<String> deleteUser(@PathVariable Integer id) {
         boolean isSuccess = userService.deleteUserById(id);
         if (isSuccess) {
             return Result.success("删除成功");
@@ -68,7 +67,7 @@ public class UserController {
 
     // 6. 多条件组合查询用户
     @GetMapping("/search")
-    public Result searchUser(
+    public Result<List<User>> searchUser(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer minAge,
             @RequestParam(required = false) Integer maxAge,
@@ -80,7 +79,7 @@ public class UserController {
 
     // 7. 带条件的分页查询用户
     @GetMapping("/page")
-    public Result getUserByPage(
+    public Result<IPage<User>> getUserByPage(
             @RequestParam(defaultValue = "1") Long pageNum,
             @RequestParam(defaultValue = "10") Long pageSize,
             @RequestParam(required = false) String name,

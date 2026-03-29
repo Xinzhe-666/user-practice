@@ -1,54 +1,52 @@
 package org.example.userpractice.common;
 
-// 企业级通用接口返回格式
-public class Result {
-    // 状态码：200=成功，500=失败
-    private Integer code;
-    // 提示信息
-    private String msg;
-    // 要返回的数据
-    private Object data;
+import lombok.Data;
 
-    // 成功的静态方法（带数据）
-    public static Result success(Object data) {
-        Result result = new Result();
+/**
+ * 全局统一返回结果类
+ */
+@Data
+public class Result<T> {
+    // 响应状态码：200成功，400参数错误/业务异常，500系统异常
+    private Integer code;
+    // 响应提示信息
+    private String msg;
+    // 响应数据
+    private T data;
+
+    // 成功响应（带数据）
+    public static <T> Result<T> success(T data) {
+        Result<T> result = new Result<>();
         result.setCode(200);
         result.setMsg("操作成功");
         result.setData(data);
         return result;
     }
 
-    // 失败的静态方法（带错误信息）
-    public static Result error(String msg) {
-        Result result = new Result();
-        result.setCode(500);
+    // 成功响应（仅提示）
+    public static <T> Result<T> success(String msg) {
+        Result<T> result = new Result<>();
+        result.setCode(200);
         result.setMsg(msg);
         result.setData(null);
         return result;
     }
 
-    // getter和setter
-    public Integer getCode() {
-        return code;
+    // 失败响应
+    public static <T> Result<T> error(String msg) {
+        Result<T> result = new Result<>();
+        result.setCode(400);
+        result.setMsg(msg);
+        result.setData(null);
+        return result;
     }
 
-    public void setCode(Integer code) {
-        this.code = code;
-    }
-
-    public String getMsg() {
-        return msg;
-    }
-
-    public void setMsg(String msg) {
-        this.msg = msg;
-    }
-
-    public Object getData() {
-        return data;
-    }
-
-    public void setData(Object data) {
-        this.data = data;
+    // 失败响应（自定义状态码）
+    public static <T> Result<T> error(Integer code, String msg) {
+        Result<T> result = new Result<>();
+        result.setCode(code);
+        result.setMsg(msg);
+        result.setData(null);
+        return result;
     }
 }
