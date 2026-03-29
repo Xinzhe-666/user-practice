@@ -1,0 +1,172 @@
+### 1. 查询所有用户（GET请求，和浏览器访问一样）
+GET http://localhost:8080/user/list
+Content-Type: application/json
+
+###
+
+### 2. 根据ID查询用户（GET请求）
+GET http://localhost:8080/user/1
+Content-Type: application/json
+
+###
+
+### 3. 测试添加用户：验证「姓名不能重复」的规则
+POST http://localhost:8080/user/add
+Content-Type: application/json
+
+{
+  "name": "张三",
+  "age": 22,
+  "gender": "男",
+  "password": "123456"
+}
+
+###
+
+### 4. 测试添加用户：验证「年龄不能小于0」的规则
+POST http://localhost:8080/user/add
+Content-Type: application/json
+
+{
+  "name": "测试用户1",
+  "age": -5,
+  "gender": "男",
+  "password": "123456"
+}
+
+###
+
+### 5. 测试添加用户：验证「密码长度不能少于6位」的规则
+POST http://localhost:8080/user/add
+Content-Type: application/json
+
+{
+  "name": "测试用户2",
+  "age": 22,
+  "gender": "男",
+  "password": "123"
+}
+
+###
+
+### 6. 测试添加用户：验证「所有规则都符合，添加成功」
+POST http://localhost:8080/user/add
+Content-Type: application/json
+
+{
+  "name": "李鑫哲",
+  "age": 20,
+  "gender": "男",
+  "password": "12345678"
+}
+
+###
+
+### 7. 测试修改用户（PUT请求，必须带ID）
+PUT http://localhost:8080/user/update
+Content-Type: application/json
+
+{
+  "id": 3,
+  "name": "李鑫哲-修改",
+  "age": 21,
+  "gender": "男",
+  "password": "87654321"
+}
+
+###
+
+### 8. 测试删除用户（DELETE请求，末尾数字是要删除的用户ID）
+DELETE http://localhost:8080/user/3
+Content-Type: application/json
+
+### 9. 条件查询用户：测试年龄>=20的用户
+GET http://localhost:8080/user/search
+Content-Type: application/json
+
+### 10. 模糊搜索：查所有姓张的用户
+GET http://localhost:8080/user/search?name=张
+Content-Type: application/json
+
+### 11. 范围筛选：查20-30岁的用户
+GET http://localhost:8080/user/search?minAge=20&maxAge=30
+Content-Type: application/json
+
+### 12. 精准过滤：只查女性用户
+GET http://localhost:8080/user/search?gender=女
+Content-Type: application/json
+
+### 13. 多条件组合：查20-30岁、姓张的男性用户
+GET http://localhost:8080/user/search?name=张&minAge=20&maxAge=30&gender=男
+Content-Type: application/json
+
+### 14. 查所有用户，按年龄从大到小排序
+GET http://localhost:8080/user/search
+Content-Type: application/json
+
+### 15. 基础分页：查第1页，每页2条数据（你的表里有14条数据，会分成7页）
+GET http://localhost:8080/user/page?pageNum=1&pageSize=2
+Content-Type: application/json
+
+### 16. 分页+搜索：查第1页，每页10条，姓张的用户
+GET http://localhost:8080/user/page?pageNum=1&pageSize=10&name=张
+Content-Type: application/json
+
+### 17. 分页+多条件筛选：查第1页，每页10条，20-30岁的女性用户
+GET http://localhost:8080/user/page?pageNum=1&pageSize=10&minAge=20&maxAge=30&gender=女
+Content-Type: application/json
+
+### 18. 测试默认值：不传页码和每页条数，默认查第1页、每页10条
+GET http://localhost:8080/user/page
+Content-Type: application/json
+
+### 19. 测试字段自动填充：添加新用户
+POST http://localhost:8080/user/add
+Content-Type: application/json
+
+{
+  "name": "测试自动填充",
+  "age": 22,
+  "gender": "男",
+  "password": "123456"
+}
+### 20. 测试逻辑删除：删除用户
+DELETE http://localhost:8080/user/16
+Content-Type: application/json
+
+### 21. 测试全局异常处理：传非数字的ID，触发类型转换异常
+GET http://localhost:8080/user/abc
+Content-Type: application/json
+
+### 22. 测试参数校验：姓名为空，触发@NotBlank校验
+POST http://localhost:8080/user/add
+Content-Type: application/json
+
+{
+  "name": "",
+  "age": 22,
+  "gender": "男",
+  "password": "123456"
+}
+
+### 23. 测试参数校验：年龄为负数，触发@Min校验
+POST http://localhost:8080/user/add
+Content-Type: application/json
+
+{
+  "name": "测试校验",
+  "age": -5,
+  "gender": "男",
+  "password": "123456"
+}
+
+### 24. 测试参数校验：密码长度不足6位，触发@Size校验
+POST http://localhost:8080/user/add
+Content-Type: application/json
+
+{
+  "name": "测试校验",
+  "age": 22,
+  "gender": "男",
+  "password": "123"
+}
