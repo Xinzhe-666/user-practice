@@ -1,140 +1,185 @@
 package org.example.userpractice.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import org.springframework.util.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.example.userpractice.common.RedisUtil;
 import org.example.userpractice.entity.User;
 import org.example.userpractice.mapper.UserMapper;
 import org.example.userpractice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-// @Service注解：告诉Spring Boot，这是业务层实现类，把它交给Spring管理，这样Controller才能注入它
 @Service
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
-    // 注入Mapper：Service层不直接操作数据库，只调用Mapper
+    // 注入加密工具
     @Autowired
-    private UserMapper userMapper;
+    private PasswordEncoder passwordEncoder;
 
-    // 查询所有用户：业务逻辑简单，直接调用Mapper查所有
+    @Autowired
+    private RedisUtil redisUtil;
+
+    // 你之前已有的方法，不用改
     @Override
     public List<User> getAllUsers() {
-        // selectList(null)：MyBatis-Plus的方法，null表示没有查询条件，查所有
-        return userMapper.selectList(null);
+        return this.list();
     }
 
-    // 根据ID查询用户：直接调用Mapper按主键查
     @Override
     public User getUserById(Integer id) {
-        return userMapper.selectById(id);
+        String cacheKey = "user:info:" + id;
+        String lockKey = "lock:user:" + id; // 锁的key，每个用户ID对应一个锁
+
+        // 1. 先查缓存
+        User cacheUser = (User) redisUtil.get(cacheKey);
+        if (cacheUser != null) {
+            return cacheUser;
+        }
+
+        // 2. 缓存未命中，尝试获取互斥锁
+        try {
+            // 尝试获取锁，设置锁的过期时间10秒，防止死锁
+            boolean getLock = redisUtil.setIfAbsent(lockKey, "1", 10, TimeUnit.SECONDS);
+            if (getLock) {
+                // 拿到锁了，去查数据库
+                User user = this.getById(id);
+                if (user != null) {
+                    redisUtil.set(cacheKey, user, 30, TimeUnit.MINUTES);
+                } else {
+                    redisUtil.set(cacheKey, null, 2, TimeUnit.MINUTES);
+                }
+                return user;
+            } else {
+                // 没拿到锁，等待100毫秒，重新查缓存
+                Thread.sleep(100);
+                return getUserById(id); // 递归重试
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            // 最后一定要释放锁
+            redisUtil.del(lockKey);
+        }
+
+        return null;
     }
 
-    // 添加用户：修正后的正确代码
     @Override
     public boolean addUser(User user) {
-        // 业务规则1：判断姓名是否已存在（不能有重名用户）
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        // 修正1：数据库字段名改成name，方法改成getName()，和实体类、表完全对应
-        queryWrapper.eq("name", user.getName());
-        // 查询是否有重名用户
-        User existUser = userMapper.selectOne(queryWrapper);
+        // 先判断用户名是否存在
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getName, user.getName());
+        User existUser = this.getOne(queryWrapper);
         if (existUser != null) {
-            return false; // 姓名已存在，添加失败
-        }
-
-        // 业务规则2：年龄不能小于0（非法年龄）
-        if (user.getAge() < 0) {
             return false;
         }
-
-        // 业务规则3：密码长度不能少于6位
-        if (user.getPassword() == null || user.getPassword().length() < 6) {
-            return false;
-        }
-
-        // 所有规则通过，插入数据到数据库
-        int rows = userMapper.insert(user);
-        return rows > 0; // 插入成功返回true，失败返回false
+        return this.save(user);
     }
 
-    // 修改用户
     @Override
     public boolean updateUser(User user) {
-        // 先判断要修改的用户是否存在
-        User existUser = userMapper.selectById(user.getId());
-        if (existUser == null) {
-            // 用户不存在，返回修改失败
-            return false;
+        boolean isSuccess = this.updateById(user);
+        if (isSuccess) {
+            // 更新数据库成功后，删除对应的缓存，下次查询会重新加载最新的数据
+            String cacheKey = "user:info:" + user.getId();
+            redisUtil.del(cacheKey);
         }
-        // 用户存在，调用Mapper根据ID更新
-        int rows = userMapper.updateById(user);
-        return rows > 0;
+        return isSuccess;
     }
 
-    // 根据ID删除用户
     @Override
     public boolean deleteUserById(Integer id) {
-        // 先判断要删除的用户是否存在
-        User existUser = userMapper.selectById(id);
-        if (existUser == null) {
-            // 用户不存在，返回删除失败
-            return false;
+        boolean isSuccess = this.removeById(id);
+        if (isSuccess) {
+            // 删除数据库数据后，删除对应的缓存
+            String cacheKey = "user:info:" + id;
+            redisUtil.del(cacheKey);
         }
-        // 用户存在，调用Mapper根据ID删除
-        int rows = userMapper.deleteById(id);
-        return rows > 0;
+        return isSuccess;
     }
 
     @Override
     public List<User> getUserByCondition(String name, Integer minAge, Integer maxAge, String gender) {
-        // 1. 创建Lambda条件构造器，泛型是User实体类
-        LambdaQueryWrapper<User> lambdaQuery = new LambdaQueryWrapper<>();
-
-        // 2. 拼接条件：不用写字符串字段名，直接用User::getName引用属性，编译期检查
-        // 姓名模糊搜索
-        lambdaQuery.like(StringUtils.hasLength(name), User::getName, name);
-        // 性别精准匹配
-        lambdaQuery.eq(StringUtils.hasLength(gender), User::getGender, gender);
-        // 最小年龄
-        lambdaQuery.ge(minAge != null, User::getAge, minAge);
-        // 最大年龄
-        lambdaQuery.le(maxAge != null, User::getAge, maxAge);
-
-        // 3. 排序
-        lambdaQuery.orderByDesc(User::getAge).orderByAsc(User::getId);
-
-        // 4. 执行查询
-        return userMapper.selectList(lambdaQuery);
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        if (name != null && !name.isEmpty()) {
+            queryWrapper.like(User::getName, name);
+        }
+        if (minAge != null) {
+            queryWrapper.ge(User::getAge, minAge);
+        }
+        if (maxAge != null) {
+            queryWrapper.le(User::getAge, maxAge);
+        }
+        if (gender != null && !gender.isEmpty()) {
+            queryWrapper.eq(User::getGender, gender);
+        }
+        return this.list(queryWrapper);
     }
 
     @Override
     public IPage<User> getUserByPage(Long pageNum, Long pageSize, String name, Integer minAge, Integer maxAge, String gender) {
-        // 1. 创建分页对象：参数1=当前页码，参数2=每页条数
-        // 注意：MyBatis-Plus的页码是从1开始的，不用自己算偏移量，它会自动处理
         Page<User> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        if (name != null && !name.isEmpty()) {
+            queryWrapper.like(User::getName, name);
+        }
+        if (minAge != null) {
+            queryWrapper.ge(User::getAge, minAge);
+        }
+        if (maxAge != null) {
+            queryWrapper.le(User::getAge, maxAge);
+        }
+        if (gender != null && !gender.isEmpty()) {
+            queryWrapper.eq(User::getGender, gender);
+        }
+        return this.page(page, queryWrapper);
+    }
 
-        // 2. 创建Lambda条件构造器，拼接搜索条件（和之前学的条件查询完全一样）
-        LambdaQueryWrapper<User> lambdaQuery = new LambdaQueryWrapper<>();
-        // 姓名模糊搜索
-        lambdaQuery.like(StringUtils.hasText(name), User::getName, name);
-        // 性别精准匹配
-        lambdaQuery.eq(StringUtils.hasText(gender), User::getGender, gender);
-        // 最小年龄
-        lambdaQuery.ge(minAge != null, User::getAge, minAge);
-        // 最大年龄
-        lambdaQuery.le(maxAge != null, User::getAge, maxAge);
-        // 排序：按年龄降序
-        lambdaQuery.orderByDesc(User::getAge);
+    // 今天新增的注册方法实现
+    @Override
+    public boolean register(User user) {
+        // 1. 先判断用户名是否已存在
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getName, user.getName());
+        User existUser = this.getOne(queryWrapper);
+        if (existUser != null) {
+            return false; // 用户名已存在，注册失败
+        }
 
-        // 3. 执行分页查询：Mapper自带的selectPage方法，传入分页对象和条件构造器
-        // 这一步会自动执行2条SQL：① 带条件的分页查询SQL ② 带条件的COUNT(*)统计总条数SQL
-        IPage<User> userPage = userMapper.selectPage(page, lambdaQuery);
+        // 2. 【核心】对密码进行BCrypt加密，绝对不能明文存到数据库
+        String encryptedPassword = passwordEncoder.encode(user.getPassword());
+        user.setPassword(encryptedPassword);
 
-        // 4. 返回分页结果
-        return userPage;
+        // 3. 保存用户到数据库
+        return this.save(user);
+    }
+
+    // 今天新增的登录方法实现
+    @Override
+    public User login(String name, String password) {
+        // 1. 根据用户名查询用户
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getName, name);
+        User user = this.getOne(queryWrapper);
+
+        // 2. 用户名不存在，直接返回null，登录失败
+        if (user == null) {
+            return null;
+        }
+
+        // 3. 【核心】校验密码是否正确：BCrypt用matches方法比对，不能自己解密
+        boolean isPasswordCorrect = passwordEncoder.matches(password, user.getPassword());
+        if (!isPasswordCorrect) {
+            return null; // 密码错误，登录失败
+        }
+
+        // 4. 用户名和密码都正确，返回用户对象，登录成功
+        return user;
     }
 }

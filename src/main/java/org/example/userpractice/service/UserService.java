@@ -27,4 +27,9 @@ public interface UserService {
     // 带条件的分页查询用户
     // 参数：pageNum=当前页码，pageSize=每页条数，其他是搜索条件
     IPage<User> getUserByPage(Long pageNum, Long pageSize, String name, Integer minAge, Integer maxAge, String gender);
+
+    // 用户注册：返回true=注册成功，false=注册失败（用户名已存在）
+    boolean register(User user);
+    // 用户登录：返回null=登录失败（用户名不存在/密码错误），返回用户对象=登录成功
+    User login(String name, String password);
 }

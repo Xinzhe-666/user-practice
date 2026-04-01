@@ -170,3 +170,93 @@ Content-Type: application/json
   "gender": "男",
   "password": "123"
 }
+
+### 测试用户注册（正常参数）
+POST http://localhost:8080/user/register
+Content-Type: application/json
+
+{
+  "name": "华为实习测试",
+  "age": 20,
+  "gender": "男",
+  "password": "Huawei123"
+}
+
+### 测试用户登录（正确的账号密码）
+POST http://localhost:8080/user/login
+Content-Type: application/x-www-form-urlencoded
+
+name=华为实习测试&password=Huawei123
+
+### 测试用户登录（错误的密码）
+POST http://localhost:8080/user/login
+Content-Type: application/x-www-form-urlencoded
+
+name=华为实习测试&password=123456
+
+### 1. 注册一个普通用户（默认角色是user普通用户）
+POST http://localhost:8080/user/register
+Content-Type: application/json
+
+{
+  "name": "normal_user",
+  "age": 20,
+  "gender": "男",
+  "password": "User@123456"
+}
+
+### 2. 普通用户登录，获取JWT令牌
+POST http://localhost:8080/user/login
+Content-Type: application/x-www-form-urlencoded
+
+name=normal_user&password=User@123456
+
+### 3. 用普通用户的令牌，调用删除用户接口（预期返回：权限不足）
+DELETE http://localhost:8080/user/1
+Authorization: Bearer 这里替换成上面登录返回的令牌
+
+### 4. 去MySQL数据库，把这个用户的role改成super_admin，执行SQL：
+-- UPDATE tb_user SET role = 'super_admin' WHERE name = 'normal_user';
+
+### 5. 用超级管理员账号重新登录，获取新的令牌
+POST http://localhost:8080/user/login
+Content-Type: application/x-www-form-urlencoded
+
+name=normal_user&password=User@123456
+
+### 6. 用超级管理员的令牌，再次调用删除用户接口（预期返回：删除成功）
+DELETE http://localhost:8080/user/1
+Authorization: Bearer 这里替换成新的超级管理员令牌
+
+### 7. 不带令牌调用需要登录的接口（预期返回：请先登录）
+GET http://localhost:8080/user/1
+
+### 8. 用修改过的/过期的令牌调用接口（预期返回：令牌无效或已过期）
+GET http://localhost:8080/user/1
+Authorization: Bearer 随便改几个字符的无效令牌
+
+### 1. 第一次查询ID为1的用户（缓存未命中，会查数据库，控制台会打印SQL日志）
+GET http://localhost:8080/user/1
+Authorization: Bearer 你的有效令牌
+
+### 2. 第二次查询同一个ID的用户（缓存命中，不会打印SQL日志，接口响应时间会快几十倍）
+GET http://localhost:8080/user/1
+Authorization: Bearer 你的有效令牌
+
+### 3. 修改这个用户的信息（会删除缓存）
+PUT http://localhost:8080/user/update
+Content-Type: application/json
+Authorization: Bearer 你的管理员令牌
+
+{
+  "id": 1,
+  "name": "测试缓存更新",
+  "age": 22,
+  "gender": "男",
+  "password": "123456"
+}
+
+### 4. 再次查询这个用户（缓存被删了，会重新查数据库，更新缓存）
+GET http://localhost:8080/user/1
+Authorization: Bearer 你的有效令牌
+

@@ -32,4 +32,7 @@ public class User {
     @NotBlank(message = "密码不能为空")
     @Size(min = 6, max = 20, message = "密码长度必须在6-20位之间")
     private String password;
+
+    // 用户角色：对应RoleConstants中的常量
+    private String role;
 }
