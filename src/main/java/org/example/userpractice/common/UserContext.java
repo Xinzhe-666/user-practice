@@ -3,30 +3,29 @@ package org.example.userpractice.common;
 import org.example.userpractice.entity.User;
 
 /**
- * 当前登录用户上下文
- * 基于ThreadLocal实现，线程隔离，保证用户信息的线程安全
+ * 用户上下文工具类
+ * 基于ThreadLocal存储当前登录用户信息
  */
 public class UserContext {
 
-    // ThreadLocal：每个线程独立存储，不会和其他线程混淆
     private static final ThreadLocal<User> CURRENT_USER = new ThreadLocal<>();
 
     /**
-     * 设置当前登录的用户信息
+     * 设置当前登录用户
      */
     public static void setCurrentUser(User user) {
         CURRENT_USER.set(user);
     }
 
     /**
-     * 获取当前登录的用户信息
+     * 获取当前登录用户
      */
     public static User getCurrentUser() {
         return CURRENT_USER.get();
     }
 
     /**
-     * 获取当前登录用户的ID
+     * 获取当前登录用户ID
      */
     public static Integer getCurrentUserId() {
         User user = CURRENT_USER.get();
@@ -34,16 +33,15 @@ public class UserContext {
     }
 
     /**
-     * 获取当前登录用户的角色
+     * 获取当前登录用户名（就是你缺失的这个方法）
      */
-    public static String getCurrentUserRole() {
+    public static String getCurrentUsername() {
         User user = CURRENT_USER.get();
-        return user == null ? null : user.getRole();
+        return user == null ? null : user.getName();
     }
 
     /**
      * 清除当前用户信息
-     * 必须在请求结束后调用，防止ThreadLocal内存泄漏
      */
     public static void clear() {
         CURRENT_USER.remove();

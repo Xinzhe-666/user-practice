@@ -1,9 +1,6 @@
-package org.example.userpractice.config;
+package org.example.userpractice.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.example.userpractice.common.JwtUtil;
-import org.example.userpractice.common.Result;
-import org.example.userpractice.common.UserContext;
 import org.example.userpractice.entity.User;
 import org.example.userpractice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +11,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * JWT令牌统一拦截器
- * 在请求进入Controller之前，统一验证令牌的合法性
+ * JWT登录拦截器：验证用户是否登录，拦截未登录的请求
  */
-@Component
+@Component // 交给Spring容器管理
 public class JwtInterceptor implements HandlerInterceptor {
 
     @Autowired
@@ -26,21 +22,20 @@ public class JwtInterceptor implements HandlerInterceptor {
     @Autowired
     private UserService userService;
 
-    // Jackson工具：把Java对象转换成JSON字符串，返回给前端
+    // Jackson工具类，用于返回JSON格式的错误信息
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    /**
-     * 请求进入Controller之前执行：统一验证令牌
-     * @return true=放行请求，false=拦截请求
-     */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 1. 从请求头中获取令牌，前端标准格式：Authorization: Bearer 令牌内容
-        String authHeader = request.getHeader("Authorization");
+        // 1. 放行OPTIONS预检请求
+        if ("OPTIONS".equals(request.getMethod())) {
+            return true;
+        }
 
-        // 2. 判断请求头中是否有合法的令牌前缀
+        // 2. 从请求头中获取Authorization令牌
+        String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            // 没有令牌，返回401未授权，提示请先登录
+            // 没有令牌，返回401未授权
             response.setContentType("application/json;charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write(OBJECT_MAPPER.writeValueAsString(Result.error(401, "请先登录")));
@@ -55,7 +50,7 @@ public class JwtInterceptor implements HandlerInterceptor {
             // 令牌无效/过期，返回401未授权
             response.setContentType("application/json;charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write(OBJECT_MAPPER.writeValueAsString(Result.error(401, "令牌无效或已过期，请重新登录")));
+            response.getWriter().write(OBJECT_MAPPER.writeValueAsString(Result.error(401, "登录已过期，请重新登录")));
             return false;
         }
 
@@ -77,11 +72,9 @@ public class JwtInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    /**
-     * 请求处理完成后执行：清除ThreadLocal中的用户信息，防止内存泄漏
-     */
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        // 请求结束后，清除ThreadLocal中的用户信息，避免内存泄漏
         UserContext.clear();
     }
 }

@@ -17,4 +17,6 @@ public class RoleConstants {
      * 普通用户：基础访问权限
      */
     public static final String ROLE_USER = "user";
+    private RoleConstants() {
+    }
 }

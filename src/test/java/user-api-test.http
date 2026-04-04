@@ -260,3 +260,30 @@ Authorization: Bearer 你的管理员令牌
 GET http://localhost:8080/user/1
 Authorization: Bearer 你的有效令牌
 
+### 1. 普通用户登录，获取令牌（会自动记录登录日志）
+POST http://localhost:8080/user/login
+Content-Type: application/x-www-form-urlencoded
+
+name=normal_user&password=User@123456
+
+### 2. 用令牌调用查询用户接口（会自动记录查询日志）
+GET http://localhost:8080/user/1
+Authorization: Bearer 替换成你上面拿到的令牌
+
+### 3. 用管理员令牌调用修改用户接口（会自动记录修改日志）
+PUT http://localhost:8080/user/update
+Content-Type: application/json
+Authorization: Bearer 替换成你的管理员令牌
+
+{
+  "id": 1,
+  "name": "测试AOP日志",
+  "age": 22,
+  "gender": "男",
+  "password": "123456"
+}
+
+### 4. 用超级管理员令牌调用删除用户接口（会自动记录删除日志）
+DELETE http://localhost:8080/user/2
+Authorization: Bearer 替换成你的超级管理员令牌
+
