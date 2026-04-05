@@ -287,3 +287,14 @@ Authorization: Bearer 替换成你的管理员令牌
 DELETE http://localhost:8080/user/2
 Authorization: Bearer 替换成你的超级管理员令牌
 
+### 1. 登录获取Token
+POST http://localhost:8080/user/login
+Content-Type: application/x-www-form-urlencoded
+
+name=test_user_001&password=Test@123456
+
+
+
+### 2. 第一次查询用户（会查数据库，并存入Redis）
+GET http://localhost:8080/user/1
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMCIsInVzZXJuYW1lIjoidGVzdF91c2VyXzAwMSIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzc1Mzc1MzYzLCJleHAiOjE3NzU0NjE3NjN9.ueqUZYmZR5VCIwX6QfyHVDzzEVnU7r2mTyMqCSLH_fY

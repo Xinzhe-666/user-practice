@@ -5,6 +5,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.example.userpractice.common.UserContext;
 import org.example.userpractice.entity.OperateLog;
 import org.example.userpractice.service.OperateLogService;
@@ -55,6 +56,12 @@ public class OperateLogAspect {
         try {
             // 获取请求信息
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes == null) {
+                log.warn("无法获取请求上下文，跳过部分日志信息");
+            } else {
+                HttpServletRequest request = attributes.getRequest();
+                // ... 原来的代码
+            }
             HttpServletRequest request = attributes.getRequest();
 
             // 设置操作人信息（未登录的用户，这两个字段为null，不影响日志记录）
@@ -62,13 +69,26 @@ public class OperateLogAspect {
             operateLog.setOperateUserName(UserContext.getCurrentUsername());
 
             // 设置请求信息
-            operateLog.setRequestMethod(request.getMethod());
+            // 获取完整方法名（类名.方法名），更精准定位问题
+            MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+            String fullMethodName = signature.getDeclaringType().getSimpleName() + "." + signature.getName();
+            operateLog.setRequestMethod(fullMethodName);
+
             operateLog.setRequestUri(request.getRequestURI());
             operateLog.setOperateType(getOperateType(request.getMethod()));
 
-            // 设置请求参数
+            // 设置请求参数（优化版：标准JSON格式 + 敏感信息脱敏）
             try {
-                operateLog.setRequestParams(OBJECT_MAPPER.writeValueAsString(Arrays.toString(joinPoint.getArgs())));
+                // 1. 把参数数组转换成标准的JSON字符串
+                String params = OBJECT_MAPPER.writeValueAsString(Arrays.asList(joinPoint.getArgs()));
+
+                // 2. 敏感信息脱敏：把password字段的值替换成***
+                // 处理JSON格式：{"password":"123456"}
+                params = params.replaceAll("\"password\":\"[^\"]*\"", "\"password\":\"***\"");
+                // 处理表单格式：password=123456
+                params = params.replaceAll("password=[^&]*", "password=***");
+
+                operateLog.setRequestParams(params);
             } catch (Exception e) {
                 log.error("请求参数序列化失败", e);
                 operateLog.setRequestParams("参数序列化失败");
@@ -107,17 +127,12 @@ public class OperateLogAspect {
      * 根据请求方法获取操作类型
      */
     private String getOperateType(String method) {
-        switch (method) {
-            case "POST":
-                return "新增";
-            case "PUT":
-                return "修改";
-            case "DELETE":
-                return "删除";
-            case "GET":
-                return "查询";
-            default:
-                return "其他";
-        }
+        return switch (method) {
+            case "POST" -> "新增";
+            case "PUT" -> "修改";
+            case "DELETE" -> "删除";
+            case "GET" -> "查询";
+            default -> "其他";
+        };
     }
 }

@@ -121,4 +121,7 @@ public class RedisUtil {
             return false;
         }
     }
+
+    public void delete(String cacheKey) {
+    }
 }

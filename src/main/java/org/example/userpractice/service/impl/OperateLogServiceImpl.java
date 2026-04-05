@@ -1,8 +1,9 @@
-package org.example.userpractice.service;
+package org.example.userpractice.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.example.userpractice.entity.OperateLog;
+import org.example.userpractice.service.OperateLogService;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 

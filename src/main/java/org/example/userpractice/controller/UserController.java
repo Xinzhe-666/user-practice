@@ -1,12 +1,15 @@
 package org.example.userpractice.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.example.userpractice.common.JwtUtil;
 import org.example.userpractice.common.Result;
 import org.example.userpractice.entity.User;
 import org.example.userpractice.service.UserService;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -17,8 +20,10 @@ import java.util.Map;
  * 用户控制器
  * 处理登录、注册、查询、修改、删除等接口
  */
+@Api(tags = "用户管理模块")
 @RestController
 @RequestMapping("/user")
+@Validated
 public class UserController {
 
     @Autowired
@@ -31,6 +36,7 @@ public class UserController {
     /**
      * 用户注册接口
      */
+    @ApiOperation("用户注册")
     @PostMapping("/register")
     public Result register(@RequestBody @Valid User user) {
         // 1. 校验用户名是否已存在
@@ -55,6 +61,7 @@ public class UserController {
     /**
      * 用户登录接口
      */
+    @ApiOperation("用户登录")
     @PostMapping("/login")
     public Result login(@RequestParam String name, @RequestParam String password) {
         // 1. 根据用户名查询用户
@@ -86,6 +93,7 @@ public class UserController {
     /**
      * 根据ID查询用户信息
      */
+    @ApiOperation("根据ID查询用户")
     @GetMapping("/{id}")
     public Result getUserById(@PathVariable Integer id) {
         User user = userService.getUserById(id);
@@ -95,6 +103,7 @@ public class UserController {
     /**
      * 更新用户信息
      */
+    @ApiOperation("修改用户信息")
     @PutMapping("/update")
     public Result updateUser(@RequestBody User user) {
         boolean isSuccess = userService.updateUser(user);
@@ -107,6 +116,7 @@ public class UserController {
     /**
      * 根据ID删除用户
      */
+    @ApiOperation("删除用户")
     @DeleteMapping("/{id}")
     public Result deleteUserById(@PathVariable Integer id) {
         boolean isSuccess = userService.deleteUserById(id);
@@ -119,6 +129,7 @@ public class UserController {
     /**
      * 查询所有用户列表
      */
+    @ApiOperation("查询所有用户列表")
     @GetMapping("/list")
     public Result getUserList() {
         return Result.success(userService.list());
