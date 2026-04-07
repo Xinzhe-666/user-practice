@@ -54,7 +54,7 @@ POST http://localhost:8080/user/add
 Content-Type: application/json
 
 {
-  "name": "李鑫哲",
+  "name": "李三金",
   "age": 20,
   "gender": "男",
   "password": "12345678"
@@ -68,7 +68,7 @@ Content-Type: application/json
 
 {
   "id": 3,
-  "name": "李鑫哲-修改",
+  "name": "李三金-修改",
   "age": 21,
   "gender": "男",
   "password": "87654321"
@@ -176,10 +176,10 @@ POST http://localhost:8080/user/register
 Content-Type: application/json
 
 {
-  "name": "华为实习测试",
+  "name": "测试",
   "age": 20,
   "gender": "男",
-  "password": "Huawei123"
+  "password": "test123"
 }
 
 ### 测试用户登录（正确的账号密码）
