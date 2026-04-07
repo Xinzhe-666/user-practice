@@ -1,5 +1,5 @@
 # 用户管理系统
-基于 Spring Boot + MyBatis-Plus + JWT + Redis 的用户管理系统，完全符合大厂开发规范，是完整的单体Spring Boot后端项目。
+基于 Spring Boot + MyBatis-Plus + JWT + Redis 的用户管理系统，是完整的单体Spring Boot后端项目。
 
 ---
 
