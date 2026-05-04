@@ -1,8 +1,8 @@
 package org.example.userpractice.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import org.example.userpractice.entity.User;
 import org.apache.ibatis.annotations.Mapper;
+import org.example.userpractice.entity.User;
 
 @Mapper
 public interface UserMapper extends BaseMapper<User> {
